@@ -163,7 +163,7 @@
           title: '感知与视觉 (Perception)',
           icon: 'fa-eye',
           items: [
-            { name: 'LiDAR Driver', status: true, cpu: '8.2%', mem: '150MB' },
+            { name: 'Depth Camera Driver', status: true, cpu: '8.2%', mem: '150MB' }, // 更换为深度相机
             { name: 'RealSense Vision Server', status: false, cpu: '-', mem: '-' },
             { name: 'IMU Filter Node', status: true, cpu: '1.1%', mem: '24MB' },
           ]
@@ -179,18 +179,30 @@
         }
       ]);
 
+      // 用于记录当前正在进行启停操作的服务，展示 Loading 状态
+      const [processingSrv, setProcessingSrv] = useState(null);
+
       const toggleService = (catIndex, itemIndex) => {
-        const newCats = [...serviceCategories];
-        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items] };
-        newCats[catIndex].items[itemIndex] = { 
-          ...newCats[catIndex].items[itemIndex], 
-          status: !newCats[catIndex].items[itemIndex].status 
-        };
-        setServiceCategories(newCats);
+        const srvId = `${catIndex}-${itemIndex}`;
+        if (processingSrv) return; // 如果有服务正在启停，防止重复点击
+        
+        setProcessingSrv(srvId);
+        
+        // 模拟服务启动/关闭的延迟 (800ms)
+        setTimeout(() => {
+          const newCats = [...serviceCategories];
+          newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items] };
+          newCats[catIndex].items[itemIndex] = { 
+            ...newCats[catIndex].items[itemIndex], 
+            status: !newCats[catIndex].items[itemIndex].status 
+          };
+          setServiceCategories(newCats);
+          setProcessingSrv(null);
+        }, 800);
       };
 
       const alarmHistory = [
-        { id: 1, time: '14:22:05', code: 'ERR-042', desc: '左侧雷达被遮挡', type: 'error' },
+        { id: 1, time: '14:22:05', code: 'ERR-042', desc: '前置深度相机通讯异常', type: 'error' }, // 修改了原有的雷达故障
         { id: 2, time: '13:15:30', code: 'WARN-11', desc: '电池电量低于 20%', type: 'warning' },
         { id: 3, time: '09:40:12', code: 'INFO-01', desc: '系统启动自检完成', type: 'info' },
         { id: 4, time: '09:35:00', code: 'ERR-005', desc: '底盘电机通讯异常 (已恢复)', type: 'error' },
@@ -247,7 +259,10 @@
               <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0">
                 <div className="flex justify-between items-center mb-4 shrink-0 border-b border-gray-100 pb-3">
                   <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                    <i className="fa-solid fa-server text-purple-500"></i> 本体服务控制面板 (Services Dashboard)
+                    <i className="fa-solid fa-server text-purple-500"></i> 
+                    本体服务控制面板
+                    {/* 新增了待确认标签 */}
+                    <span className="text-[10px] font-normal text-orange-500 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded ml-1">具体服务待与研发确认</span>
                   </h2>
                   <button className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-lg transition-colors">
                     <i className="fa-solid fa-rotate-right"></i> 重启全部
@@ -263,20 +278,37 @@
                           <i className={`fa-solid ${category.icon} text-gray-400`}></i> {category.title}
                         </h3>
                         <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-1">
-                          {category.items.map((item, itemIdx) => (
-                            <div key={itemIdx} className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-100 shadow-sm">
-                              <div className="flex flex-col">
-                                <span className={`text-[11px] font-bold ${item.status ? 'text-gray-800' : 'text-gray-400'}`}>{item.name}</span>
-                                <span className="text-[9px] text-gray-400 font-mono mt-0.5">CPU: {item.cpu} | Mem: {item.mem}</span>
+                          {category.items.map((item, itemIdx) => {
+                            const isProcessing = processingSrv === `${catIdx}-${itemIdx}`;
+                            return (
+                              <div key={itemIdx} className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-100 shadow-sm">
+                                <div className="flex flex-col">
+                                  <span className={`text-[11px] font-bold ${item.status ? 'text-gray-800' : 'text-gray-400'}`}>{item.name}</span>
+                                  <span className="text-[9px] text-gray-400 font-mono mt-0.5">CPU: {item.cpu} | Mem: {item.mem}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {/* 状态文字和 Loading 提示反馈 */}
+                                  {isProcessing ? (
+                                    <i className="fa-solid fa-circle-notch fa-spin text-blue-500 text-[10px]"></i>
+                                  ) : (
+                                    <span className={`text-[9px] font-bold ${item.status ? 'text-green-600' : 'text-gray-400'}`}>
+                                      {item.status ? '运行中' : '已停止'}
+                                    </span>
+                                  )}
+                                  
+                                  {/* 模拟 Toggle 开关 */}
+                                  <div 
+                                    onClick={() => toggleService(catIdx, itemIdx)}
+                                    className={`w-9 h-4.5 rounded-full relative cursor-pointer transition-colors shadow-inner flex items-center 
+                                      ${item.status ? 'bg-green-500' : 'bg-gray-300'} 
+                                      ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+                                  >
+                                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[2px] shadow-sm transition-transform ${item.status ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}></div>
+                                  </div>
+                                </div>
                               </div>
-                              <div 
-                                onClick={() => toggleService(catIdx, itemIdx)}
-                                className={`w-9 h-4.5 rounded-full relative cursor-pointer transition-colors shadow-inner ${item.status ? 'bg-green-500' : 'bg-gray-300'}`}
-                              >
-                                <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[2px] shadow-sm transition-transform ${item.status ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}></div>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     ))}

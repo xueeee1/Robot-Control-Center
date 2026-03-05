@@ -529,12 +529,20 @@
     // ============================================================================
     const PerceptionPanel = () => {
       const [visionMode, setVisionMode] = useState('RGB');
-      const [mainCam, setMainCam] = useState('头部');
+      const [mainCam, setMainCam] = useState('头部双目');
+      
+      // 10路摄像头配置与模拟示意图
       const cameras = [
-        { id: '头部', url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80' },
-        { id: '颈部', url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&q=80' },
-        { id: '手部', url: 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=400&q=80' },
-        { id: '背部', url: 'https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=400&q=80' }
+        { id: '头部双目', type: 'Stereo', url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80' }, // 正常前方平视
+        { id: '颈前鱼眼', type: 'Fisheye', url: 'https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=800&q=80' }, // 广角/略带形变
+        { id: '颈后鱼眼(左)', type: 'Fisheye', url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80' }, // 左后方工业背景
+        { id: '颈后鱼眼(右)', type: 'Fisheye', url: 'https://images.unsplash.com/photo-1485827404703-89b55fccc5b3?w=800&q=80' }, // 右后方工业背景
+        { id: '左胸双目', type: 'Stereo', url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80' }, // 胸部中视角
+        { id: '右胸双目', type: 'Stereo', url: 'https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=800&q=80' }, // 胸部中视角
+        { id: '腹部RGBD', type: 'RGB-D', url: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80' }, // 俯视地面/避障视角
+        { id: '后背RGBD', type: 'RGB-D', url: 'https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=800&q=80' }, // 纯后方视角
+        { id: '左手单目', type: 'Mono', url: 'https://images.unsplash.com/photo-1563207153-f404bf5e566d?w=800&q=80' }, // 手部微距/抓取视角
+        { id: '右手单目', type: 'Mono', url: 'https://images.unsplash.com/photo-1527430253228-e93688616381?w=800&q=80' }  // 手部微距/抓取视角
       ];
 
       const [imuData, setImuData] = useState({
@@ -557,45 +565,83 @@
       }, []);
 
       const activeMainCamConfig = cameras.find(c => c.id === mainCam);
-      const subCams = cameras.filter(c => c.id !== mainCam);
+      const subCams = cameras.filter(c => c.id !== mainCam); // 刚好 9 个子相机
 
       return (
-        <div className="w-full h-full grid grid-cols-12 gap-5 min-h-0 animate-[fadeIn_0.3s_ease-in-out]">
-          <div className="col-span-5 flex flex-col gap-4 h-full min-h-0">
-            <div className="flex-1 bg-black rounded-2xl relative overflow-hidden shadow-md border border-gray-300 group">
-              <img src={activeMainCamConfig.url} className={`w-full h-full object-cover transition-opacity duration-300 ${visionMode === 'RGBD' ? 'opacity-40 sepia hue-rotate-180' : 'opacity-80'}`} alt="Main Camera"/>
-              {visionMode === '特征点' && <div className="absolute inset-0 bg-black/20" style={{backgroundImage: 'radial-gradient(#22d3ee 1px, transparent 1px)', backgroundSize: '15px 15px', opacity: 0.4}}></div>}
-              <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm text-white px-2.5 py-1 rounded text-xs font-bold font-mono tracking-widest flex items-center gap-2"><div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>{mainCam} CAMERA</div>
+        <div className="w-full flex flex-col lg:grid lg:grid-cols-12 gap-5 min-h-0 lg:h-full animate-[fadeIn_0.3s_ease-in-out]">
+          
+          {/* 左侧：视觉矩阵 (占 5 列) */}
+          <div className="lg:col-span-5 flex flex-col gap-3 min-h-0 h-auto lg:h-full">
+            {/* 主摄像头视图 */}
+            <div className="flex-1 bg-black rounded-2xl relative overflow-hidden shadow-md border border-gray-300 group min-h-[240px] lg:min-h-0">
+              <img 
+                src={activeMainCamConfig.url} 
+                className={`w-full h-full object-cover transition-opacity duration-300 ${visionMode === 'RGBD' ? 'opacity-40 sepia hue-rotate-180' : 'opacity-80'}`} 
+                alt="Main Camera"
+              />
+              {visionMode === '特征点' && (
+                <div className="absolute inset-0 bg-black/20" style={{backgroundImage: 'radial-gradient(#22d3ee 1px, transparent 1px)', backgroundSize: '15px 15px', opacity: 0.4}}></div>
+              )}
+              
+              {/* OSD 信息悬浮层 */}
+              <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                <div className="bg-black/60 backdrop-blur-md text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold font-mono tracking-widest flex items-center gap-2 border border-white/10 shadow-sm">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                  {mainCam}
+                </div>
+                <div className="bg-black/40 backdrop-blur-sm text-blue-300 px-2 py-0.5 rounded text-[9px] font-mono w-fit border border-blue-500/30">
+                  TYPE: {activeMainCamConfig.type}
+                </div>
+              </div>
+
               <div className="absolute top-3 right-3 flex bg-black/40 backdrop-blur-md rounded-lg p-1 border border-white/20">
                 {['RGB', 'RGBD', '特征点'].map(mode => (
                   <button key={mode} onClick={() => setVisionMode(mode)} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${visionMode === mode ? 'bg-blue-600 text-white shadow' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}>{mode}</button>
                 ))}
               </div>
             </div>
-            <div className="h-28 flex gap-4 shrink-0">
+            
+            {/* 9路子摄像头矩阵 (3x3 网格) */}
+            <div className="grid grid-cols-3 gap-2 shrink-0">
               {subCams.map(cam => (
-                <div key={cam.id} onClick={() => setMainCam(cam.id)} className="flex-1 bg-black rounded-xl overflow-hidden relative cursor-pointer border-2 border-transparent hover:border-blue-400 transition-all opacity-70 hover:opacity-100 group">
+                <div 
+                  key={cam.id} 
+                  onClick={() => setMainCam(cam.id)} 
+                  className="aspect-video bg-black rounded-xl overflow-hidden relative cursor-pointer border-2 border-transparent hover:border-blue-400 transition-all opacity-80 hover:opacity-100 group shadow-sm"
+                >
                   <img src={cam.url} className="w-full h-full object-cover" alt={cam.id} />
                   <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all"></div>
-                  <div className="absolute bottom-1.5 left-1.5 bg-black/60 text-white px-1.5 py-0.5 rounded text-[9px] font-bold">{cam.id}</div>
+                  
+                  {/* 子相机标签 */}
+                  <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm text-white px-1.5 py-0.5 rounded text-[9px] font-medium truncate max-w-[90%] border border-white/10">
+                    {cam.id}
+                  </div>
+                  {/* 类型小标 */}
+                  <div className="absolute top-1 right-1 text-[8px] font-mono text-white/50 group-hover:text-blue-300 transition-colors drop-shadow-md">
+                    {cam.type}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="col-span-4 h-full bg-[#0a0f1a] rounded-2xl relative overflow-hidden shadow-inner border border-slate-700/50">
-            <div className="absolute top-4 left-4 text-cyan-500 text-xs font-mono font-bold flex items-center gap-2 z-20 bg-black/40 px-2 py-1 rounded backdrop-blur-sm"><i className="fa-solid fa-cubes"></i> 实时 3D 点云</div>
+          {/* 中间：3D 点云 (占 4 列) */}
+          <div className="lg:col-span-4 h-[300px] lg:h-full bg-[#0a0f1a] rounded-2xl relative overflow-hidden shadow-inner border border-slate-700/50 shrink-0">
+            <div className="absolute top-4 left-4 text-cyan-500 text-xs font-mono font-bold flex items-center gap-2 z-20 bg-black/40 px-2 py-1 rounded backdrop-blur-sm border border-cyan-900/50">
+              <i className="fa-solid fa-cubes"></i> 融合 3D 点云 (LiDAR + RGBD)
+            </div>
             <div className="absolute inset-0" style={{backgroundImage: 'linear-gradient(rgba(34, 211, 238, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 211, 238, 0.15) 1px, transparent 1px)', backgroundSize: '30px 30px', transform: 'perspective(600px) rotateX(70deg) scale(2.5) translateY(-20%)', transformOrigin: '50% 100%'}}></div>
             <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] -mt-[150px] -ml-[150px] border border-cyan-500/30 rounded-full" style={{ transform: 'perspective(600px) rotateX(70deg)'}}></div>
             <div className="absolute inset-0 flex items-center justify-center animate-[spin_12s_linear_infinite]">
-              {Array.from({length: 60}).map((_, i) => (
-                <div key={i} className="absolute w-1.5 h-1.5 bg-cyan-300 rounded-full" style={{ transform: `translate(${(Math.random() - 0.5) * 200}px, ${(Math.random() - 0.5) * 200}px)`, opacity: Math.random() * 0.8 + 0.2, boxShadow: '0 0 6px rgba(34, 211, 238, 0.9)'}}></div>
+              {Array.from({length: 80}).map((_, i) => (
+                <div key={i} className="absolute w-1.5 h-1.5 bg-cyan-300 rounded-full" style={{ transform: `translate(${(Math.random() - 0.5) * 200}px, ${(Math.random() - 0.5) * 200}px) translateZ(${(Math.random() - 0.5) * 50}px)`, opacity: Math.random() * 0.8 + 0.2, boxShadow: '0 0 6px rgba(34, 211, 238, 0.9)'}}></div>
               ))}
             </div>
           </div>
 
-          <div className="col-span-3 flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar pr-1">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+          {/* 右侧：IMU 姿态数据 (占 3 列) */}
+          <div className="lg:col-span-3 flex flex-col gap-4 h-auto lg:h-full lg:overflow-y-auto custom-scrollbar lg:pr-1 shrink-0">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 shrink-0">
               <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3 flex justify-between items-center"><span><i className="fa-solid fa-compass text-blue-500"></i> 姿态可视化 (Euler)</span></h3>
               <div className="flex gap-4 items-center">
                 <div className="w-16 h-16 perspective-container flex items-center justify-center bg-gray-50 rounded-lg border border-gray-100">
@@ -608,7 +654,8 @@
                 </div>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 shrink-0">
               <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3"><i className="fa-solid fa-cube text-purple-500"></i> 四元数 (Quaternions)</h3>
               <div className="grid grid-cols-2 gap-2">
                 {['w', 'x', 'y', 'z'].map((axis) => (
@@ -616,11 +663,13 @@
                 ))}
               </div>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 shrink-0">
               <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3"><i className="fa-solid fa-gauge-high text-red-500"></i> 加速度 (m/s²)</h3>
               <div className="space-y-3">{['x', 'y', 'z'].map((axis) => (<div key={`acc-${axis}`} className="flex items-center gap-2"><div className="w-4 text-[10px] font-bold text-gray-400 uppercase text-center">{axis}</div><DualBar value={imuData.accel[axis]} max={20} unit="g" /></div>))}</div>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 shrink-0">
               <h3 className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-3"><i className="fa-solid fa-rotate-right text-orange-500"></i> 角速度 (rad/s)</h3>
               <div className="space-y-3">{['x', 'y', 'z'].map((axis) => (<div key={`gyro-${axis}`} className="flex items-center gap-2"><div className="w-4 text-[10px] font-bold text-gray-400 uppercase text-center">{axis}</div><DualBar value={imuData.gyro[axis]} max={3.14} unit="rad" /></div>))}</div>
             </div>

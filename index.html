@@ -372,24 +372,24 @@
     // 控制页面 (原遥控页面)
     // ============================================================================
     const ControlPanel = () => {
-      const [rcMode, setRcMode] = useState('行走');
+      const [rcMode, setRcMode] = useState('Idle (阻尼)');
       const [activeKey, setActiveKey] = useState(null);
-
-      const keyBindings = [
-        { key: 'W', action: '前进', type: 'move' },
-        { key: 'S', action: '后退', type: 'move' },
-        { key: 'A', action: '左平移', type: 'move' },
-        { key: 'D', action: '右平移', type: 'move' },
-        { key: '↑', action: '抬头 (Pitch Up)', type: 'turn' },
-        { key: '↓', action: '低头 (Pitch Down)', type: 'turn' },
-        { key: '←', action: '左转 (Yaw Left)', type: 'turn' },
-        { key: '→', action: '右转 (Yaw Right)', type: 'turn' },
-        { key: '1', action: '打招呼', type: 'action' },
-        { key: '2', action: '下蹲', type: 'action' },
-        { key: '3', action: '握手', type: 'action' },
-        { key: '4', action: '鞠躬', type: 'action' },
-        { key: 'Space', action: '急停 (E-STOP)', type: 'system' }
+      
+      // 模式定义 (数字键 1-4 触发)
+      const modes = [
+        { key: '1', id: 'Protect (零力矩)', color: 'gray' },
+        { key: '2', id: 'Idle (阻尼)', color: 'blue' },
+        { key: '3', id: 'Stand (站立)', color: 'green' },
+        { key: '4', id: 'Motion (运动)', color: 'purple' }
       ];
+
+      // 自定义快捷动作映射 (字母键)
+      const [customActions, setCustomActions] = useState([
+        { slot: 'Action A', key: 'Q', action: '打招呼' },
+        { slot: 'Action B', key: 'E', action: '下蹲' },
+        { slot: 'Action C', key: 'R', action: '握手' },
+        { slot: 'Action D', key: 'F', action: '机械臂归零' },
+      ]);
 
       useEffect(() => {
         const handleKeyDown = (e) => {
@@ -399,7 +399,12 @@
           else if (key === 'ARROWDOWN') setActiveKey('↓');
           else if (key === 'ARROWLEFT') setActiveKey('←');
           else if (key === 'ARROWRIGHT') setActiveKey('→');
-          else setActiveKey(key);
+          else {
+            setActiveKey(key);
+            // 处理模式切换
+            const matchedMode = modes.find(m => m.key === key);
+            if (matchedMode) setRcMode(matchedMode.id);
+          }
         };
         const handleKeyUp = () => setActiveKey(null);
         
@@ -411,102 +416,155 @@
         };
       }, []);
 
+      // 辅助函数：确定模式标签的颜色
+      const getModeColor = (modeId) => {
+        const m = modes.find(m => m.id === modeId);
+        if(!m) return 'bg-gray-100 text-gray-500';
+        const colors = {
+          'gray': 'bg-gray-100 text-gray-700 border-gray-300',
+          'blue': 'bg-blue-100 text-blue-700 border-blue-300',
+          'green': 'bg-green-100 text-green-700 border-green-300',
+          'purple': 'bg-purple-100 text-purple-700 border-purple-300'
+        };
+        return colors[m.color];
+      };
+
       return (
-        <div className="w-full h-full flex gap-6 min-h-0 animate-[fadeIn_0.3s_ease-in-out]">
-          <div className="flex-1 flex flex-col gap-6 min-h-0">
-            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between shrink-0">
+        <div className="w-full h-full flex flex-col lg:flex-row gap-5 min-h-0 animate-[fadeIn_0.3s_ease-in-out]">
+          
+          {/* 左侧：核心控制台与键盘可视化 (占据主要空间) */}
+          <div className="flex-1 flex flex-col gap-5 min-h-0 h-auto lg:h-full">
+            
+            {/* 顶部状态与模式栏 */}
+            <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-xl shrink-0">
                     <i className="fa-regular fa-keyboard"></i>
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-800">键盘快捷控制台</h2>
-                    <p className="text-xs text-gray-500">使用键盘直接下发基础位移与动作指令</p>
+                    <h2 className="text-base md:text-lg font-bold text-gray-800 leading-tight">核心控制台</h2>
+                    <p className="text-[10px] md:text-xs text-gray-500">固定映射核心移动指令，保障操作安全</p>
                   </div>
                </div>
 
-               <div className="flex bg-gray-100 p-1.5 rounded-xl border border-gray-200">
-                  {['零力矩', '阻尼', '行走'].map(mode => (
-                    <button 
-                      key={mode}
-                      onClick={() => setRcMode(mode)}
-                      className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${rcMode === mode ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
+               {/* 当前运行模式高亮显示 */}
+               <div className="flex items-center gap-3">
+                 <span className="text-[10px] text-gray-400 font-bold uppercase">当前状态</span>
+                 <div className={`px-4 py-1.5 border rounded-lg font-bold text-sm shadow-sm transition-colors ${getModeColor(rcMode)}`}>
+                   {rcMode}
+                 </div>
+               </div>
             </div>
 
-            <div className="flex-1 bg-[#111827] rounded-2xl border border-gray-700 shadow-inner relative overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
+            {/* 可视化键盘区 */}
+            <div className="flex-1 bg-[#111827] rounded-2xl border border-gray-700 shadow-inner relative overflow-hidden flex flex-col items-center justify-center min-h-[500px]">
                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4b5563 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                
-               <div className="absolute top-6 right-8">
-                 <button className="w-24 h-24 bg-red-500/90 backdrop-blur-md text-white rounded-full font-bold shadow-[0_0_30px_rgba(239,68,68,0.5)] border-4 border-red-300 flex items-center justify-center hover:bg-red-600 active:scale-95 transition-all">
-                   <span className="text-xl tracking-widest drop-shadow-md">急停</span>
-                 </button>
+               {/* 顶部：系统模式切换区 (数字键) */}
+               <div className="absolute top-6 left-0 right-0 flex justify-center z-10">
+                 <div className="flex flex-col items-center">
+                   <div className="text-gray-400 font-bold uppercase tracking-widest text-[10px] mb-3 flex items-center gap-2">
+                     <i className="fa-solid fa-power-off text-yellow-500"></i> 系统模式控制 (数字键)
+                   </div>
+                   <div className="flex gap-4">
+                      {modes.map(m => (
+                        <div key={m.key} className={`flex flex-col items-center gap-1.5`}>
+                          <div className={`key-cap w-10 h-10 md:w-12 md:h-12 text-sm md:text-base ${activeKey === m.key ? 'active !bg-blue-600' : ''}`}>{m.key}</div>
+                          <span className={`text-[10px] font-bold ${rcMode === m.id ? 'text-white' : 'text-gray-500'}`}>{m.id}</span>
+                        </div>
+                      ))}
+                   </div>
+                 </div>
                </div>
 
-               <div className="flex items-start gap-24 z-10 mt-10">
+               {/* 中部：核心移动控制区 (WASD + 方向键) */}
+               <div className="flex flex-col md:flex-row items-center md:items-start gap-12 md:gap-24 z-10 mt-20">
+                  {/* 行走 (WASD) */}
                   <div className="flex flex-col items-center gap-4">
-                    <div className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2"><i className="fa-solid fa-arrows-up-down-left-right"></i> 底盘移动 (行走)</div>
-                    <div className={`key-cap w-16 h-16 text-2xl ${activeKey === 'W' ? 'active' : ''}`}>W</div>
-                    <div className="flex gap-4">
-                      <div className={`key-cap w-16 h-16 text-2xl ${activeKey === 'A' ? 'active' : ''}`}>A</div>
-                      <div className={`key-cap w-16 h-16 text-2xl ${activeKey === 'S' ? 'active' : ''}`}>S</div>
-                      <div className={`key-cap w-16 h-16 text-2xl ${activeKey === 'D' ? 'active' : ''}`}>D</div>
+                    <div className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2 flex items-center gap-2">
+                      <i className="fa-solid fa-arrows-up-down-left-right text-blue-400"></i> 底盘平移
+                    </div>
+                    <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === 'W' ? 'active' : ''}`}>W</div>
+                    <div className="flex gap-3 md:gap-4">
+                      <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === 'A' ? 'active' : ''}`}>A</div>
+                      <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === 'S' ? 'active' : ''}`}>S</div>
+                      <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === 'D' ? 'active' : ''}`}>D</div>
                     </div>
                   </div>
 
+                  {/* 姿态 (方向键) */}
                   <div className="flex flex-col items-center gap-4">
-                    <div className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2"><i className="fa-solid fa-rotate"></i> 姿态控制 (转向/俯仰)</div>
-                    <div className={`key-cap w-16 h-16 text-2xl ${activeKey === '↑' ? 'active' : ''}`}><i className="fa-solid fa-arrow-up"></i></div>
-                    <div className="flex gap-4">
-                      <div className={`key-cap w-16 h-16 text-2xl ${activeKey === '←' ? 'active' : ''}`}><i className="fa-solid fa-arrow-left"></i></div>
-                      <div className={`key-cap w-16 h-16 text-2xl ${activeKey === '↓' ? 'active' : ''}`}><i className="fa-solid fa-arrow-down"></i></div>
-                      <div className={`key-cap w-16 h-16 text-2xl ${activeKey === '→' ? 'active' : ''}`}><i className="fa-solid fa-arrow-right"></i></div>
+                    <div className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2 flex items-center gap-2">
+                      <i className="fa-solid fa-rotate text-purple-400"></i> 姿态转向
+                    </div>
+                    <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === '↑' ? 'active' : ''}`}><i className="fa-solid fa-arrow-up"></i></div>
+                    <div className="flex gap-3 md:gap-4">
+                      <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === '←' ? 'active' : ''}`}><i className="fa-solid fa-arrow-left"></i></div>
+                      <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === '↓' ? 'active' : ''}`}><i className="fa-solid fa-arrow-down"></i></div>
+                      <div className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === '→' ? 'active' : ''}`}><i className="fa-solid fa-arrow-right"></i></div>
                     </div>
                   </div>
                </div>
 
-               <div className="flex gap-4 mt-16 z-10">
-                  {[1, 2, 3, 4].map(num => (
-                    <div key={num} className={`key-cap px-6 py-3 text-sm ${activeKey === String(num) ? 'active' : ''}`}>
-                      {num}: {keyBindings.find(b => b.key === String(num))?.action}
-                    </div>
-                  ))}
-               </div>
+               {/* 底部：自定义动作反馈 + 巨型急停 */}
+               <div className="flex flex-col items-center gap-6 z-10 mt-12 w-full px-8">
+                  {/* 自定义动作按键反馈 (动态根据右侧配置生成) */}
+                  <div className="flex gap-3 bg-gray-800/50 p-3 rounded-2xl border border-gray-700/50 backdrop-blur-sm">
+                    <span className="text-[10px] text-gray-500 font-bold self-center mr-2">快捷动作<br/>(自定义)</span>
+                    {customActions.map(action => (
+                      <div key={action.slot} className="flex flex-col items-center gap-1 w-16">
+                        <div className={`key-cap w-10 h-10 text-sm ${activeKey === action.key ? 'active !bg-cyan-600' : ''}`}>
+                          {action.key}
+                        </div>
+                        <span className="text-[9px] text-gray-400 truncate w-full text-center" title={action.action}>{action.action}</span>
+                      </div>
+                    ))}
+                  </div>
 
-               <div className={`key-cap w-80 h-14 mt-8 text-lg tracking-widest gap-3 z-10 ${activeKey === 'Space' ? 'active !bg-red-600' : ''}`}>
-                  <i className="fa-solid fa-triangle-exclamation"></i>
-                  SPACE (急停)
+                  {/* 巨型急停空格键 */}
+                  <div className={`key-cap w-full max-w-[400px] h-14 text-lg tracking-widest gap-3 ${activeKey === 'Space' ? 'active !bg-red-600' : ''}`}>
+                     <i className="fa-solid fa-triangle-exclamation"></i>
+                     SPACE (安全急停 E-STOP)
+                  </div>
                </div>
             </div>
           </div>
 
-          <div className="w-80 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden shrink-0">
-            <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center justify-between shrink-0">
+          {/* 右侧：Config 动作配置侧边栏 (剥离了核心键，专心做 Action) */}
+          <div className="w-full lg:w-80 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col shrink-0 h-auto lg:h-full">
+            <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between shrink-0 rounded-t-2xl">
               <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <i className="fa-solid fa-wrench text-blue-500"></i> 快捷键映射 (Config)
+                <i className="fa-solid fa-wrench text-blue-500"></i> 自定义动作绑定
               </h2>
-              <button className="text-xs text-blue-600 font-bold hover:underline">还原默认</button>
             </div>
             
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-              <div className="space-y-1">
-                {keyBindings.map((binding, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg group border border-transparent hover:border-gray-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-700 shadow-sm">
-                         {binding.key === 'Space' ? 'SPC' : binding.key}
-                       </div>
-                       <div className="text-sm font-medium text-gray-700">
-                         {binding.action}
-                       </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+              <div className="text-[10px] text-gray-500 leading-relaxed bg-blue-50 text-blue-700 p-2 rounded border border-blue-100">
+                <i className="fa-solid fa-circle-info mr-1"></i>
+                提示：核心移动控制 (WASD/方向键) 及系统模式切换 (1-4) 为底层硬编码，不可在此修改。此处仅用于绑定业务快捷动作。
+              </div>
+
+              {/* 动作槽位配置表单 */}
+              <div className="space-y-3">
+                {customActions.map((item, idx) => (
+                  <div key={item.slot} className="bg-gray-50 p-3 rounded-xl border border-gray-200 flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.slot}</span>
+                      <select className="text-xs bg-white border border-gray-300 rounded p-0.5 outline-none font-mono text-gray-700 font-bold focus:border-blue-500">
+                        {['Q', 'E', 'R', 'F', 'Z', 'X', 'C', 'V'].map(k => (
+                          <option key={k} value={k} selected={k === item.key}>{k}</option>
+                        ))}
+                      </select>
                     </div>
-                    <button className="text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity p-2">
-                      <i className="fa-solid fa-pen-to-square text-xs"></i>
-                    </button>
+                    <select className="w-full text-sm bg-white border border-gray-300 rounded p-1.5 outline-none font-medium text-gray-800 focus:border-blue-500">
+                      <option selected={item.action === '打招呼'}>打招呼</option>
+                      <option selected={item.action === '下蹲'}>下蹲</option>
+                      <option selected={item.action === '握手'}>握手</option>
+                      <option selected={item.action === '机械臂归零'}>机械臂归零</option>
+                      <option selected={item.action === '点头'}>点头</option>
+                      <option selected={item.action === '摇头'}>摇头</option>
+                      <option value="none">-- 禁用 --</option>
+                    </select>
                   </div>
                 ))}
               </div>
@@ -514,7 +572,7 @@
             
             <div className="p-4 border-t border-gray-100 shrink-0">
                <button className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 active:scale-95 transition-all">
-                 保存配置
+                 保存动作配置
                </button>
             </div>
           </div>

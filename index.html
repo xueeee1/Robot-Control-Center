@@ -282,25 +282,22 @@
                         {category.items.map((item, itemIdx) => {
                           const isProcessing = processingSrv === `${catIdx}-${itemIdx}` || isRestartingAll;
                           return (
-                            // 修改：让整行支持点击交互和 Hover 效果
+                            // 修改：依据状态动态改变背景颜色和文字颜色，加强视觉区分
                             <div 
                               key={itemIdx} 
                               onClick={() => toggleService(catIdx, itemIdx)}
-                              className={`flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-100 shadow-sm cursor-pointer hover:bg-blue-50 transition-colors group ${isProcessing ? 'opacity-70 pointer-events-none' : ''}`}
+                              className={`flex items-center justify-between p-3 rounded-xl border shadow-sm cursor-pointer transition-colors group 
+                                ${item.status ? 'bg-green-50 border-green-200 hover:bg-green-100' : 'bg-gray-100 border-gray-200 hover:bg-gray-200 opacity-80'} 
+                                ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
                             >
                               <div className="flex flex-col">
-                                <span className={`text-[11px] font-bold transition-colors ${item.status ? 'text-gray-800 group-hover:text-blue-700' : 'text-gray-400 group-hover:text-gray-600'}`}>{item.name}</span>
-                                <span className="text-[9px] text-gray-400 font-mono mt-0.5">CPU: {item.cpu} | Mem: {item.mem}</span>
+                                <span className={`text-[11px] font-bold transition-colors ${item.status ? 'text-green-800' : 'text-gray-600'}`}>{item.name}</span>
+                                <span className={`text-[9px] font-mono mt-0.5 ${item.status ? 'text-green-600/80' : 'text-gray-400'}`}>CPU: {item.cpu} | Mem: {item.mem}</span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                {isProcessing ? (
-                                  <i className="fa-solid fa-circle-notch fa-spin text-blue-500 text-[10px]"></i>
-                                ) : (
-                                  <span className={`text-[9px] font-bold ${item.status ? 'text-green-600' : 'text-gray-400'}`}>
-                                    {item.status ? '运行中' : '已停止'}
-                                  </span>
+                                {isProcessing && (
+                                  <i className="fa-solid fa-circle-notch fa-spin text-blue-500 text-[10px] mr-1"></i>
                                 )}
-                                
                                 <div 
                                   className={`w-9 h-4.5 rounded-full relative transition-colors shadow-inner flex items-center 
                                     ${item.status ? 'bg-green-500' : 'bg-gray-300'}`}
@@ -389,8 +386,10 @@
 
       useEffect(() => {
         const handleKeyDown = (e) => {
+          if (e.key === 'F10') e.preventDefault(); // 拦截浏览器默认 F10
+          
           const key = e.key.toUpperCase();
-          if (key === ' ') setActiveKey('Space');
+          if (key === 'F10') setActiveKey('F10');
           else if (key === 'ARROWUP') setActiveKey('↑');
           else if (key === 'ARROWDOWN') setActiveKey('↓');
           else if (key === 'ARROWLEFT') setActiveKey('←');
@@ -502,9 +501,10 @@
                     ))}
                   </div>
 
-                  <div className={`key-cap w-full max-w-[400px] h-14 text-lg tracking-widest gap-3 ${activeKey === 'Space' ? 'active !bg-red-600' : ''}`}>
+                  {/* 替换原有的 Space 急停为 F10 */}
+                  <div className={`key-cap w-full max-w-[400px] h-14 text-lg tracking-widest gap-3 ${activeKey === 'F10' ? 'active !bg-red-600' : ''}`}>
                      <i className="fa-solid fa-triangle-exclamation"></i>
-                     SPACE (安全急停 E-STOP)
+                     F10 (安全急停 E-STOP)
                   </div>
                </div>
             </div>
@@ -561,7 +561,7 @@
 
     // ============================================================================
     // --- [File: src/components/PerceptionPanel.jsx] ---
-    // 感知信息 (Perception) - 10路摄像头矩阵展示，右侧超大IMU仪表盘
+    // 感知信息 (Perception) - 顶部大图，底部10宫格固定阵列
     // ============================================================================
     const PerceptionPanel = () => {
       const [mainCam, setMainCam] = useState('头部双目');
@@ -587,12 +587,15 @@
         gyro: { x: 0.02, y: -0.01, z: 0.05 }
       });
 
+      const activeMainCamConfig = cameras.find(c => c.id === mainCam) || cameras[0];
+      // 支持 3D 点云的类型
+      const is3DSupported = activeMainCamConfig.type === 'RGB-D' || activeMainCamConfig.type === 'Stereo';
+
       useEffect(() => {
-        const activeMain = cameras.find(c => c.id === mainCam);
-        if (activeMain && activeMain.type !== 'RGB-D') {
+        if (!is3DSupported) {
           setShowPointCloud(false);
         }
-      }, [mainCam]);
+      }, [mainCam, is3DSupported]);
 
       useEffect(() => {
         const timer = setInterval(() => {
@@ -606,23 +609,23 @@
         return () => clearInterval(timer);
       }, []);
 
-      const activeMainCamConfig = cameras.find(c => c.id === mainCam);
-      const subCams = cameras.filter(c => c.id !== mainCam); 
-      const isRGBD = activeMainCamConfig.type === 'RGB-D';
-
       return (
-        <div className="w-full flex flex-col lg:grid lg:grid-cols-2 gap-6 min-h-0 lg:h-full animate-[fadeIn_0.3s_ease-in-out]">
-          <div className="flex flex-col gap-4 min-h-0 h-auto lg:h-full">
-            <div className="flex-1 bg-black rounded-2xl relative overflow-hidden shadow-md border border-gray-300 group min-h-[300px] lg:min-h-0">
+        <div className="w-full flex flex-col lg:grid lg:grid-cols-12 gap-6 min-h-0 lg:h-full animate-[fadeIn_0.3s_ease-in-out]">
+          
+          {/* 左侧：视觉监控主区域 (占 7 列) -> 上下布局 */}
+          <div className="lg:col-span-7 flex flex-col gap-4 min-h-0 h-auto lg:h-full">
+            
+            {/* 上半部分：大卡片主图 */}
+            <div className="flex-1 bg-black rounded-2xl relative overflow-hidden shadow-md border border-gray-300 group min-h-[350px]">
               {!showPointCloud ? (
-                <img src={activeMainCamConfig.url} className="w-full h-full object-cover opacity-80" alt="Main Camera" />
+                <img src={activeMainCamConfig.url} className="w-full h-full object-cover opacity-90" alt="Main Camera" />
               ) : (
                 <div className="absolute inset-0 bg-[#0a0f1a] overflow-hidden">
-                  <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] -mt-[200px] -ml-[200px] border border-cyan-500/20 rounded-full" style={{ transform: 'perspective(800px) rotateX(60deg)'}}></div>
+                  <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] -mt-[250px] -ml-[250px] border border-cyan-500/20 rounded-full" style={{ transform: 'perspective(800px) rotateX(60deg)'}}></div>
                   <div className="absolute inset-0" style={{backgroundImage: 'linear-gradient(rgba(34, 211, 238, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 211, 238, 0.15) 1px, transparent 1px)', backgroundSize: '40px 40px', transform: 'perspective(800px) rotateX(60deg) scale(2.5) translateY(-20%)', transformOrigin: '50% 100%'}}></div>
                   <div className="absolute inset-0 flex items-center justify-center animate-[spin_15s_linear_infinite]">
-                    {Array.from({length: 120}).map((_, i) => (
-                      <div key={i} className="absolute w-2 h-2 bg-cyan-300 rounded-full" style={{ transform: `translate(${(Math.random() - 0.5) * 250}px, ${(Math.random() - 0.5) * 250}px) translateZ(${(Math.random() - 0.5) * 80}px)`, opacity: Math.random() * 0.8 + 0.2, boxShadow: '0 0 8px rgba(34, 211, 238, 0.9)'}}></div>
+                    {Array.from({length: 150}).map((_, i) => (
+                      <div key={i} className="absolute w-2 h-2 bg-cyan-300 rounded-full" style={{ transform: `translate(${(Math.random() - 0.5) * 350}px, ${(Math.random() - 0.5) * 350}px) translateZ(${(Math.random() - 0.5) * 100}px)`, opacity: Math.random() * 0.8 + 0.2, boxShadow: '0 0 8px rgba(34, 211, 238, 0.9)'}}></div>
                     ))}
                   </div>
                 </div>
@@ -638,7 +641,7 @@
                 </div>
               </div>
 
-              {isRGBD && (
+              {is3DSupported && (
                 <div className="absolute top-4 right-4 flex bg-black/60 backdrop-blur-md rounded-lg p-1.5 border border-white/20 shadow-lg">
                   <button 
                     onClick={() => setShowPointCloud(false)} 
@@ -656,19 +659,21 @@
               )}
             </div>
             
-            <div className="grid grid-cols-3 gap-3 shrink-0">
-              {subCams.map(cam => (
+            {/* 下半部分：固定的 10 路小卡片 (5x2网格) */}
+            <div className="grid grid-cols-5 gap-3 shrink-0">
+              {cameras.map(cam => (
                 <div 
                   key={cam.id} 
                   onClick={() => setMainCam(cam.id)} 
-                  className="aspect-video bg-black rounded-xl overflow-hidden relative cursor-pointer border-2 border-transparent hover:border-blue-400 transition-all opacity-80 hover:opacity-100 group shadow-sm"
+                  className={`aspect-video bg-black rounded-xl overflow-hidden relative cursor-pointer border-[3px] transition-all shadow-sm
+                    ${mainCam === cam.id ? 'border-blue-500 opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-gray-500'}`}
                 >
                   <img src={cam.url} className="w-full h-full object-cover" alt={cam.id} />
-                  <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-all"></div>
-                  <div className="absolute bottom-1.5 left-1.5 bg-black/70 backdrop-blur-sm text-white px-2 py-0.5 rounded text-[10px] font-medium truncate max-w-[90%] border border-white/10">
+                  <div className="absolute inset-0 bg-black/30 hover:bg-transparent transition-all"></div>
+                  <div className="absolute bottom-1 left-1 bg-black/80 backdrop-blur-sm text-white px-1.5 py-0.5 rounded text-[9px] font-medium truncate max-w-[95%] border border-white/10">
                     {cam.id}
                   </div>
-                  <div className="absolute top-1.5 right-1.5 text-[9px] font-mono font-bold text-white/60 group-hover:text-blue-300 transition-colors drop-shadow-md">
+                  <div className="absolute top-1 right-1 text-[8px] font-mono font-bold text-white/70 drop-shadow-md">
                     {cam.type}
                   </div>
                 </div>
@@ -676,30 +681,31 @@
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 h-auto lg:h-full lg:overflow-y-auto custom-scrollbar lg:pr-2 content-start">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-center">
+          {/* 右侧：超大硬核 IMU 仪表盘 (占 5 列) */}
+          <div className="lg:col-span-5 grid grid-cols-1 md:grid-cols-2 gap-5 h-auto lg:h-full lg:overflow-y-auto custom-scrollbar lg:pr-2 content-start">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-center md:col-span-2">
               <h3 className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-6 flex justify-between items-center">
                 <span><i className="fa-solid fa-compass text-blue-500 mr-1.5"></i> 姿态可视化 (Euler)</span>
               </h3>
-              <div className="flex flex-col 2xl:flex-row gap-6 items-center">
-                <div className="w-24 h-24 perspective-container flex items-center justify-center bg-gray-50 rounded-xl border border-gray-100 shrink-0">
-                  <div className="w-12 h-16 bg-blue-500 preserve-3d transition-transform duration-75 shadow-md flex items-center justify-center" style={{ transform: `rotateX(${imuData.euler.pitch}deg) rotateY(${imuData.euler.yaw}deg) rotateZ(${imuData.euler.roll}deg)` }}>
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
+              <div className="flex flex-col sm:flex-row gap-8 items-center">
+                <div className="w-32 h-32 perspective-container flex items-center justify-center bg-gray-50 rounded-xl border border-gray-100 shrink-0">
+                  <div className="w-16 h-20 bg-blue-500 preserve-3d transition-transform duration-75 shadow-md flex items-center justify-center" style={{ transform: `rotateX(${imuData.euler.pitch}deg) rotateY(${imuData.euler.yaw}deg) rotateZ(${imuData.euler.roll}deg)` }}>
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
                   </div>
                 </div>
-                <div className="flex-1 w-full space-y-3">
-                  <div className="flex justify-between text-sm border-b border-gray-100 pb-2"><span className="text-gray-500">Roll</span><span className="font-mono font-bold text-gray-800 text-base">{imuData.euler.roll.toFixed(1)}°</span></div>
-                  <div className="flex justify-between text-sm border-b border-gray-100 pb-2"><span className="text-gray-500">Pitch</span><span className="font-mono font-bold text-gray-800 text-base">{imuData.euler.pitch.toFixed(1)}°</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Yaw</span><span className="font-mono font-bold text-gray-800 text-base">{imuData.euler.yaw.toFixed(1)}°</span></div>
+                <div className="flex-1 w-full space-y-4">
+                  <div className="flex justify-between text-base border-b border-gray-100 pb-2"><span className="text-gray-500">Roll</span><span className="font-mono font-bold text-gray-800 text-lg">{imuData.euler.roll.toFixed(1)}°</span></div>
+                  <div className="flex justify-between text-base border-b border-gray-100 pb-2"><span className="text-gray-500">Pitch</span><span className="font-mono font-bold text-gray-800 text-lg">{imuData.euler.pitch.toFixed(1)}°</span></div>
+                  <div className="flex justify-between text-base"><span className="text-gray-500">Yaw</span><span className="font-mono font-bold text-gray-800 text-lg">{imuData.euler.yaw.toFixed(1)}°</span></div>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-center">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-center md:col-span-2">
               <h3 className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-6">
                 <i className="fa-solid fa-cube text-purple-500 mr-1.5"></i> 四元数 (Quaternions)
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 {['w', 'x', 'y', 'z'].map((axis) => (
                   <div key={axis} className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center gap-1.5 shadow-inner">
                     <span className="text-[10px] text-gray-400 uppercase font-bold">{axis} 轴</span>
@@ -744,7 +750,7 @@
 
     // ============================================================================
     // --- [File: src/components/TeachingPanel.jsx] ---
-    // 示教 (Teaching) - 连贯动画联动, 平铺滑杆
+    // 示教 (Teaching) - 连贯动画联动, 平铺滑杆, 恢复默认功能
     // ============================================================================
     const TeachingPanel = () => {
       const [isTeachingMode, setIsTeachingMode] = useState(false);
@@ -753,7 +759,6 @@
       const [recordTime, setRecordTime] = useState(0);
       const [isPlaying, setIsPlaying] = useState(false);
 
-      // 关节数据结构 (用于渲染滑杆)
       const jointGroups = [
         { 
           id: 'head', name: '头部',
@@ -839,18 +844,31 @@
         setKeyframes(keyframes.filter(kf => kf.id !== id));
       };
 
+      // 恢复默认位置
+      const handleResetDefault = () => {
+        if(!isTeachingMode || teachMethod !== 'virtual' || isPlaying) return;
+        setJointAngles({ ...initialAngles });
+      };
+
       return (
         <div className="w-full flex flex-col lg:grid lg:grid-cols-12 gap-5 min-h-0 lg:h-full animate-[fadeIn_0.3s_ease-in-out]">
           
-          {/* 左侧：平铺滑杆控制 (占 3 列) */}
+          {/* 左侧：平铺滑杆控制 */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden min-h-[400px] lg:min-h-0 shrink-0">
             <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                 <i className="fa-solid fa-sliders text-blue-500"></i> 电机位置控制
               </h2>
+              {/* 新增恢复默认位置按钮 */}
+              <button 
+                onClick={handleResetDefault}
+                disabled={!isTeachingMode || teachMethod !== 'virtual' || isPlaying}
+                className="text-[10px] bg-white border border-gray-300 hover:bg-gray-100 text-gray-600 px-2 py-1 rounded transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shadow-sm"
+              >
+                <i className="fa-solid fa-rotate-left"></i> 恢复默认
+              </button>
             </div>
             
-            {/* 18个平铺滑杆 */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-5">
               <div className={`transition-opacity ${(!isTeachingMode || teachMethod === 'physical' || isPlaying) ? 'opacity-50 pointer-events-none' : ''}`}>
                 {jointGroups.map((group, gIdx) => (
@@ -883,7 +901,6 @@
             </div>
           </div>
 
-          {/* 中间：骨架联动预览 (占 5 列) - 去除了 max-w 限制，调整了 viewBox 以放大机器人 */}
           <div className="lg:col-span-5 bg-[#0a0f1a] rounded-2xl relative overflow-hidden shadow-inner border border-slate-700/50 flex flex-col min-h-[300px] shrink-0">
             <div className="absolute top-4 left-4 z-20 flex items-center gap-3">
               <span className="text-cyan-500 text-xs font-mono font-bold flex items-center gap-2 bg-black/40 px-2 py-1 rounded backdrop-blur-sm border border-cyan-900/50">
@@ -900,10 +917,7 @@
               <div className="absolute inset-0" style={{backgroundImage: 'linear-gradient(rgba(34, 211, 238, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 211, 238, 0.05) 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
               
               <svg viewBox="50 20 300 400" className="w-full h-full overflow-visible drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
-                
-                {/* 骨架腿部 (新重绘的线条双腿) */}
                 <g transform="translate(0, 280)" style={{ transition: 'transform 0.5s ease-in-out' }}>
-                   {/* 左腿 (左侧) */}
                    <g transform="translate(180, 0)">
                       <circle cx="0" cy="0" r="10" fill="#374151" />
                       <path d="M 0 0 L -10 50" stroke="#4b5563" strokeWidth="12" strokeLinecap="round" />
@@ -911,7 +925,6 @@
                       <path d="M -10 50 L -5 100" stroke="#6b7280" strokeWidth="10" strokeLinecap="round" />
                       <path d="M -5 100 L -15 110 L 5 110 Z" fill="#9ca3af" />
                    </g>
-                   {/* 右腿 (右侧) */}
                    <g transform="translate(220, 0)">
                       <circle cx="0" cy="0" r="10" fill="#374151" />
                       <path d="M 0 0 L 10 50" stroke="#4b5563" strokeWidth="12" strokeLinecap="round" />
@@ -921,12 +934,9 @@
                    </g>
                 </g>
 
-                {/* 腰部联动 (全局添加 0.5s CSS transition 让其动起来平滑) */}
                 <g transform={`translate(${jointAngles.t_yaw * 0.2}, 0)`} style={{ transition: 'transform 0.5s ease-in-out' }}>
-                  {/* 躯干 */}
                   <rect x="160" y="140" width="80" height="140" rx="15" fill="#3b82f6" fillOpacity="0.8" stroke="#60a5fa" strokeWidth="3" />
                   
-                  {/* 头部 */}
                   <g transform={`translate(200, 140) rotate(${jointAngles.h_roll}) translate(0, ${jointAngles.h_pitch * -0.2})`} style={{ transition: 'transform 0.5s ease-in-out' }}>
                     <path d="M 0 0 L 0 -20" stroke="#9ca3af" strokeWidth="8" strokeLinecap="round" />
                     <rect x="-25" y="-60" width="50" height="50" rx="10" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="2" />
@@ -934,7 +944,6 @@
                     <circle cx={10 + jointAngles.h_yaw * 0.15} cy="-40" r="4" fill="#ef4444" className="animate-pulse" style={{ transition: 'cx 0.5s ease-in-out' }}/>
                   </g>
 
-                  {/* 左臂 */}
                   <g transform={`translate(240, 160)`} style={{ transition: 'transform 0.5s ease-in-out' }}>
                     <g transform={`rotate(${jointAngles.la_s_roll})`} style={{ transition: 'transform 0.5s ease-in-out' }}>
                       <circle cx="0" cy="0" r="12" fill="#60a5fa" />
@@ -952,7 +961,6 @@
                     </g>
                   </g>
 
-                  {/* 右臂 */}
                   <g transform={`translate(160, 160)`} style={{ transition: 'transform 0.5s ease-in-out' }}>
                     <g transform={`rotate(${jointAngles.ra_s_roll})`} style={{ transition: 'transform 0.5s ease-in-out' }}>
                       <circle cx="0" cy="0" r="12" fill="#60a5fa" />
@@ -974,7 +982,6 @@
             </div>
           </div>
 
-          {/* 右侧：动作编排与保存 (占 4 列) */}
           <div className="lg:col-span-4 flex flex-col gap-4 min-h-0 shrink-0">
             
             <div className={`p-5 rounded-2xl border shadow-sm flex items-center justify-between transition-colors shrink-0 ${isTeachingMode ? 'bg-yellow-50 border-yellow-300' : 'bg-white border-gray-200'}`}>
@@ -1038,11 +1045,11 @@
                     </div>
                     
                     <div className="pt-4 border-t border-gray-100 flex gap-3 shrink-0">
-                      <button onClick={playKeyframes} className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-200 transition-colors">
-                        <i className="fa-solid fa-play mr-1"></i> 连贯预览
+                      <button onClick={playKeyframes} className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-1">
+                        <i className="fa-solid fa-play"></i> 连贯预览
                       </button>
-                      <button className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md hover:bg-blue-700 transition-colors">
-                        <i className="fa-solid fa-floppy-disk mr-1"></i> 存为动作包
+                      <button className="flex-1 py-2.5 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1">
+                        <i className="fa-solid fa-floppy-disk"></i> 存为动作包
                       </button>
                     </div>
                   </div>
@@ -1108,19 +1115,20 @@
 
     // ============================================================================
     // --- [File: src/components/ConfigPanel.jsx] ---
-    // 配置 (系统与Agent配置) - 增加遥控器连接模块
+    // 配置 (系统与Agent配置) - 增加文件上传模块
     // ============================================================================
     const ConfigPanel = () => {
       const [activeSubTab, setActiveSubTab] = useState('rc_mapping');
       
-      // 遥控器连接状态逻辑
       const [rcConnected, setRcConnected] = useState(true);
       const [isPairing, setIsPairing] = useState(false);
       const [pairingTime, setPairingTime] = useState(0);
 
+      // 新增“文件上传”标签
       const subTabs = [
         { id: 'rc_mapping', label: '遥控器映射', icon: 'fa-gamepad' },
         { id: 'network', label: '网络配置', icon: 'fa-network-wired' },
+        { id: 'upload', label: '文件上传', icon: 'fa-file-arrow-up' },
         { id: 'system', label: '系统与运维', icon: 'fa-server' },
         { id: 'advanced', label: '高级参数', icon: 'fa-microchip' }
       ];
@@ -1166,7 +1174,6 @@
             {activeSubTab === 'rc_mapping' && (
               <div className="max-w-4xl mx-auto space-y-6 animate-[fadeIn_0.2s_ease-in-out]">
                 
-                {/* 新增：设备连接与配对区块 */}
                 <div className="bg-gray-50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                    <div>
                      <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2"><i className="fa-brands fa-bluetooth text-blue-500"></i> 设备连接与配对</h3>
@@ -1179,7 +1186,9 @@
                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_5px_#22c55e]"></div>
                              <span className="text-xs font-bold text-green-700">XInput Controller 已连接</span>
                            </div>
-                           <button onClick={unbindDevice} className="px-4 py-1.5 bg-white border border-gray-300 text-red-600 hover:bg-red-50 text-xs font-bold rounded-lg transition-colors shadow-sm">解绑当前设备</button>
+                           <button onClick={unbindDevice} className="px-4 py-1.5 bg-white border border-gray-300 text-red-600 hover:bg-red-50 text-xs font-bold rounded-lg transition-colors shadow-sm">
+                             解绑遥控器
+                           </button>
                         </>
                      ) : (
                         <>
@@ -1195,7 +1204,6 @@
                    </div>
                 </div>
 
-                {/* 按键映射表单，受 rcConnected 控制置灰 */}
                 <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 transition-opacity duration-300 ${!rcConnected ? 'opacity-40 pointer-events-none' : ''}`}>
                   
                   <div className="space-y-6">
@@ -1398,6 +1406,51 @@
               </div>
             )}
 
+            {/* 新增的文件上传模块 */}
+            {activeSubTab === 'upload' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-[fadeIn_0.2s_ease-in-out]">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-200 pb-4">
+                  <i className="fa-solid fa-file-arrow-up text-blue-500"></i> 文件上传与管理
+                </h2>
+                
+                <div className="bg-blue-50/50 p-8 rounded-2xl border-2 border-dashed border-blue-300 flex flex-col items-center justify-center text-center gap-4 hover:bg-blue-50 transition-colors cursor-pointer group">
+                   <div className="w-16 h-16 bg-white text-blue-500 rounded-full flex items-center justify-center text-2xl shadow-sm group-hover:scale-110 transition-transform">
+                     <i className="fa-solid fa-cloud-arrow-up"></i>
+                   </div>
+                   <div>
+                     <h3 className="font-bold text-blue-900 mb-1 text-lg">点击或拖拽文件到此处上传</h3>
+                     <p className="text-xs text-blue-600/70">支持地图文件、配置文件、动作序列库等 (.json, .yaml, .pb)</p>
+                   </div>
+                </div>
+
+                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 shadow-sm">
+                  <h3 className="text-sm font-bold text-gray-700 mb-3">最近上传记录</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <i className="fa-solid fa-file-code text-gray-400 text-lg"></i>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">motion_sequence_v2.json</p>
+                          <p className="text-[10px] text-gray-500">45 KB • 刚刚上传</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold">处理成功</span>
+                    </div>
+                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <i className="fa-solid fa-map text-gray-400 text-lg"></i>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">lab_floor1_slam.pb</p>
+                          <p className="text-[10px] text-gray-500">12.4 MB • 昨天 14:30</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold">处理成功</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeSubTab === 'network' && (
               <div className="max-w-3xl mx-auto space-y-6 animate-[fadeIn_0.2s_ease-in-out]">
                 <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-200 pb-4">
@@ -1542,8 +1595,25 @@
         }
       }, []);
 
+      // 全局急停交互函数
+      const triggerGlobalEStop = () => {
+        alert("【系统级警告】\n\n已触发全局紧急停止 (E-STOP)！\n机器人高压供电已切断，各关节已进入安全锁死状态。\n\n请在排查物理隐患后，通过物理面板解除急停锁定。");
+      };
+
       return (
-        <div className="flex h-screen w-screen bg-gray-50 overflow-hidden font-sans text-gray-900 select-none">
+        <div className="flex h-screen w-screen bg-gray-50 overflow-hidden font-sans text-gray-900 select-none relative">
+          
+          {/* 全局急停悬浮按钮 (最上层) */}
+          <div className="fixed bottom-8 right-8 z-[100]">
+            <button 
+              onClick={triggerGlobalEStop}
+              className="w-20 h-20 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-[0_0_20px_rgba(220,38,38,0.6)] flex flex-col items-center justify-center font-bold border-[4px] border-red-300 active:scale-95 transition-all group"
+            >
+              <i className="fa-solid fa-power-off text-2xl mb-1 group-hover:scale-110 transition-transform"></i>
+              <span className="text-[10px] tracking-widest">STOP</span>
+            </button>
+          </div>
+
           {/* 左侧侧边栏 (Sidebar) */}
           <aside className="w-64 bg-white border-r flex flex-col shrink-0 z-20 shadow-[2px_0_10px_rgba(0,0,0,0.02)]">
             <div className="p-6 border-b">

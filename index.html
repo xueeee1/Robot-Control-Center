@@ -282,9 +282,14 @@
                         {category.items.map((item, itemIdx) => {
                           const isProcessing = processingSrv === `${catIdx}-${itemIdx}` || isRestartingAll;
                           return (
-                            <div key={itemIdx} className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-100 shadow-sm">
+                            // 修改：让整行支持点击交互和 Hover 效果
+                            <div 
+                              key={itemIdx} 
+                              onClick={() => toggleService(catIdx, itemIdx)}
+                              className={`flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-100 shadow-sm cursor-pointer hover:bg-blue-50 transition-colors group ${isProcessing ? 'opacity-70 pointer-events-none' : ''}`}
+                            >
                               <div className="flex flex-col">
-                                <span className={`text-[11px] font-bold ${item.status ? 'text-gray-800' : 'text-gray-400'}`}>{item.name}</span>
+                                <span className={`text-[11px] font-bold transition-colors ${item.status ? 'text-gray-800 group-hover:text-blue-700' : 'text-gray-400 group-hover:text-gray-600'}`}>{item.name}</span>
                                 <span className="text-[9px] text-gray-400 font-mono mt-0.5">CPU: {item.cpu} | Mem: {item.mem}</span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
@@ -297,10 +302,8 @@
                                 )}
                                 
                                 <div 
-                                  onClick={() => toggleService(catIdx, itemIdx)}
-                                  className={`w-9 h-4.5 rounded-full relative cursor-pointer transition-colors shadow-inner flex items-center 
-                                    ${item.status ? 'bg-green-500' : 'bg-gray-300'} 
-                                    ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+                                  className={`w-9 h-4.5 rounded-full relative transition-colors shadow-inner flex items-center 
+                                    ${item.status ? 'bg-green-500' : 'bg-gray-300'}`}
                                 >
                                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[2px] shadow-sm transition-transform ${item.status ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}></div>
                                 </div>
@@ -880,7 +883,7 @@
             </div>
           </div>
 
-          {/* 中间：骨架联动预览 (占 5 列) */}
+          {/* 中间：骨架联动预览 (占 5 列) - 去除了 max-w 限制，调整了 viewBox 以放大机器人 */}
           <div className="lg:col-span-5 bg-[#0a0f1a] rounded-2xl relative overflow-hidden shadow-inner border border-slate-700/50 flex flex-col min-h-[300px] shrink-0">
             <div className="absolute top-4 left-4 z-20 flex items-center gap-3">
               <span className="text-cyan-500 text-xs font-mono font-bold flex items-center gap-2 bg-black/40 px-2 py-1 rounded backdrop-blur-sm border border-cyan-900/50">
@@ -896,7 +899,7 @@
             <div className="flex-1 w-full h-full flex items-center justify-center relative">
               <div className="absolute inset-0" style={{backgroundImage: 'linear-gradient(rgba(34, 211, 238, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 211, 238, 0.05) 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
               
-              <svg viewBox="0 0 400 450" className="w-full max-w-[300px] h-full overflow-visible drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
+              <svg viewBox="50 20 300 400" className="w-full h-full overflow-visible drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]">
                 
                 {/* 骨架腿部 (新重绘的线条双腿) */}
                 <g transform="translate(0, 280)" style={{ transition: 'transform 0.5s ease-in-out' }}>

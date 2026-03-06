@@ -1169,89 +1169,194 @@
 
     // ============================================================================
     // --- [File: src/components/ConfigPanel.jsx] ---
-    // 配置 (系统与Agent配置)
+    // 配置 (系统与Agent配置) - 顶部导航布局
     // ============================================================================
     const ConfigPanel = () => {
+      const [activeSubTab, setActiveSubTab] = useState('rc_mapping');
+
+      const subTabs = [
+        { id: 'rc_mapping', label: '遥控器映射', icon: 'fa-gamepad' },
+        { id: 'network', label: '网络配置', icon: 'fa-network-wired' },
+        { id: 'system', label: '系统与运维', icon: 'fa-server' },
+        { id: 'advanced', label: '高级参数', icon: 'fa-microchip' }
+      ];
+
       return (
-        <div className="w-full h-full flex gap-6 min-h-0 animate-[fadeIn_0.3s_ease-in-out]">
+        <div className="w-full h-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden animate-[fadeIn_0.3s_ease-in-out]">
           
-          {/* 左侧：RC 映射配置 */}
-          <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 overflow-y-auto custom-scrollbar">
-            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b border-gray-100 pb-4">
-              <i className="fa-solid fa-gamepad text-indigo-500"></i> 实体遥控器配置 (RC Mapping)
-            </h2>
-            <div className="space-y-6">
-              <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                <div className="flex items-center justify-between">
+          {/* 顶部导航菜单栏 */}
+          <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 shrink-0 z-10">
+            <div className="flex overflow-x-auto custom-scrollbar pb-1 gap-2">
+              {subTabs.map(tab => (
+                <button 
+                  key={tab.id}
+                  onClick={() => setActiveSubTab(tab.id)}
+                  className={`flex items-center gap-2 py-2 px-4 rounded-xl min-w-[120px] transition-all ${activeSubTab === tab.id ? 'bg-white text-blue-600 shadow-sm border border-gray-200 font-bold' : 'bg-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-800 font-medium border border-transparent'}`}
+                >
+                  <i className={`fa-solid ${tab.icon} text-lg`}></i>
+                  <span className="text-xs whitespace-nowrap">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 下方内容区域 (自适应滚动) */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-white">
+            {activeSubTab === 'rc_mapping' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-[fadeIn_0.2s_ease-in-out]">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-200 pb-4">
+                  <i className="fa-solid fa-gamepad text-indigo-500"></i> 实体遥控器配置 (RC Mapping)
+                </h2>
+                <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-indigo-900">RC 接收机状态</h3>
                     <p className="text-xs text-indigo-600 mt-1">SBUS 通讯协议正在运行 (Port: /dev/ttyS0)</p>
                   </div>
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">摇杆通道映射</h3>
-                {[
-                  { ch: 'CH1', desc: '左摇杆 X 轴 (横移)', current: 'Roll (横滚)' },
-                  { ch: 'CH2', desc: '左摇杆 Y 轴 (前后)', current: 'Linear Vel (线速度)' },
-                  { ch: 'CH3', desc: '右摇杆 X 轴 (转向)', current: 'Yaw Vel (转向)' },
-                  { ch: 'CH4', desc: '右摇杆 Y 轴 (俯仰)', current: 'Pitch (俯仰角)' },
-                ].map((ch, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded">{ch.ch}</span>
-                      <span className="text-sm font-medium text-gray-700">{ch.desc}</span>
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">摇杆通道映射</h3>
+                  {[
+                    { ch: 'CH1', desc: '左摇杆 X 轴 (横移)', current: 'Roll (横滚)' },
+                    { ch: 'CH2', desc: '左摇杆 Y 轴 (前后)', current: 'Linear Vel (线速度)' },
+                    { ch: 'CH3', desc: '右摇杆 X 轴 (转向)', current: 'Yaw Vel (转向)' },
+                    { ch: 'CH4', desc: '右摇杆 Y 轴 (俯仰)', current: 'Pitch (俯仰角)' },
+                  ].map((ch, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-sm hover:border-indigo-300 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded">{ch.ch}</span>
+                        <span className="text-sm font-medium text-gray-700">{ch.desc}</span>
+                      </div>
+                      <select className="text-sm border border-gray-300 rounded-lg p-1.5 outline-none focus:border-indigo-500 font-medium text-gray-600 bg-white">
+                        <option>{ch.current}</option>
+                        <option>Body Height (机身高度)</option>
+                        <option>Foot Raise (抬腿高度)</option>
+                        <option>Disabled (禁用)</option>
+                      </select>
                     </div>
-                    <select className="text-sm border border-gray-300 rounded p-1 outline-none focus:border-indigo-500 font-medium text-gray-600 bg-white">
-                      <option>{ch.current}</option>
-                      <option>Body Height (机身高度)</option>
-                      <option>Foot Raise (抬腿高度)</option>
-                      <option>Disabled (禁用)</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* 右侧：Agent 配置 */}
-          <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 overflow-y-auto custom-scrollbar">
-            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b border-gray-100 pb-4">
-              <i className="fa-solid fa-microchip text-purple-500"></i> Agent 算法配置
-            </h2>
-            
-            <div className="space-y-6">
-              <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm font-bold text-purple-900">强化学习模型权重</h3>
-                  <p className="text-xs text-purple-600 mt-1">当前加载: model_v4.2_robust.onnx</p>
+                  ))}
                 </div>
-                <button className="px-3 py-1.5 bg-white border border-purple-200 text-purple-700 text-xs font-bold rounded shadow-sm hover:bg-purple-50 transition-colors">切换模型</button>
+                <div className="flex justify-end pt-4">
+                  <button className="px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-md hover:bg-indigo-700 active:scale-95 transition-all">保存映射配置</button>
+                </div>
               </div>
+            )}
 
-              <div className="space-y-4">
-                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">策略超参数 (Hyperparameters)</h3>
-                 
-                 <div className="space-y-2">
-                   <div className="flex justify-between text-sm"><span className="text-gray-700 font-bold">Action Smoothing (动作平滑)</span><span className="font-mono text-purple-600">0.85</span></div>
-                   <input type="range" min="0" max="1" step="0.01" defaultValue="0.85" className="w-full" />
-                 </div>
-                 
-                 <div className="space-y-2 mt-4">
-                   <div className="flex justify-between text-sm"><span className="text-gray-700 font-bold">Observation Latency Comp. (延迟补偿)</span><span className="font-mono text-purple-600">12 ms</span></div>
-                   <input type="range" min="0" max="50" step="1" defaultValue="12" className="w-full" />
-                 </div>
-
-                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-4">
-                   <span className="text-sm font-bold text-gray-700">启用随机域扰动 (Domain Randomization)</span>
-                   <div className="w-10 h-5 bg-green-500 rounded-full relative cursor-pointer shadow-inner">
-                      <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 right-0.5 shadow-sm"></div>
-                   </div>
-                 </div>
+            {activeSubTab === 'network' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-[fadeIn_0.2s_ease-in-out]">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-200 pb-4">
+                  <i className="fa-solid fa-network-wired text-blue-500"></i> 机端网络配置 (Network)
+                </h2>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-sm space-y-5">
+                  <h3 className="text-sm font-bold text-gray-700 border-l-4 border-blue-500 pl-2">静态 IP 设置</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500 font-bold uppercase">IP 地址</label>
+                      <input type="text" defaultValue="192.168.1.105" className="w-full p-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-blue-500 font-mono text-gray-800 font-bold shadow-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500 font-bold uppercase">子网掩码</label>
+                      <input type="text" defaultValue="255.255.255.0" className="w-full p-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-blue-500 font-mono text-gray-800 font-bold shadow-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500 font-bold uppercase">网关 (Gateway)</label>
+                      <input type="text" defaultValue="192.168.1.1" className="w-full p-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-blue-500 font-mono text-gray-800 font-bold shadow-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-500 font-bold uppercase">DNS</label>
+                      <input type="text" defaultValue="8.8.8.8" className="w-full p-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-blue-500 font-mono text-gray-800 font-bold shadow-sm" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-4 border-t border-gray-200">
+                    <button className="px-6 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl shadow-md hover:bg-blue-700 active:scale-95 transition-all">应用配置并重启网卡</button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {activeSubTab === 'system' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-[fadeIn_0.2s_ease-in-out]">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-200 pb-4">
+                  <i className="fa-solid fa-server text-teal-500"></i> 系统运维与固件
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center gap-4 hover:border-teal-300 transition-colors group cursor-pointer">
+                    <div className="w-16 h-16 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center text-2xl group-hover:bg-teal-100 transition-colors shadow-sm">
+                      <i className="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-800 mb-1">离线固件升级 (OTA)</h3>
+                      <p className="text-xs text-gray-500">上传 .bin 固件包进行系统迭代</p>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center gap-4 hover:border-red-300 transition-colors group cursor-pointer">
+                    <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-2xl group-hover:bg-red-100 transition-colors shadow-sm">
+                      <i className="fa-solid fa-rotate-left"></i>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-red-600 mb-1">恢复出厂设置</h3>
+                      <p className="text-xs text-gray-500">清除所有用户数据与标定参数</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
+                  <div>
+                     <h3 className="font-bold text-gray-800 mb-1">导出诊断日志包</h3>
+                     <p className="text-xs text-gray-500">用于研发排查系统级崩溃与异常</p>
+                  </div>
+                  <button className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-100 transition-all flex items-center gap-2 shadow-sm">
+                    <i className="fa-solid fa-file-zipper"></i> 一键打包下载
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeSubTab === 'advanced' && (
+              <div className="max-w-3xl mx-auto space-y-6 animate-[fadeIn_0.2s_ease-in-out]">
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-200 pb-4">
+                  <i className="fa-solid fa-microchip text-purple-500"></i> Agent 算法与底层参数
+                </h2>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6">
+                  <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex justify-between items-center shadow-inner">
+                    <div>
+                      <h3 className="text-sm font-bold text-purple-900">强化学习模型权重</h3>
+                      <p className="text-xs text-purple-600 mt-1">当前加载: model_v4.2_robust.onnx</p>
+                    </div>
+                    <button className="px-4 py-2 bg-white border border-purple-200 text-purple-700 text-xs font-bold rounded-lg shadow-sm hover:bg-purple-50 transition-colors">切换模型文件</button>
+                  </div>
+
+                  <div className="space-y-5">
+                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider border-l-4 border-purple-500 pl-2">策略控制超参数</h3>
+                     
+                     <div className="space-y-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                       <div className="flex justify-between items-end"><span className="text-sm font-bold text-gray-700">Action Smoothing (动作平滑)</span><span className="font-mono text-purple-600 font-bold">0.85</span></div>
+                       <input type="range" min="0" max="1" step="0.01" defaultValue="0.85" className="w-full" />
+                     </div>
+                     
+                     <div className="space-y-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                       <div className="flex justify-between items-end"><span className="text-sm font-bold text-gray-700">Observation Latency Comp. (延迟补偿)</span><span className="font-mono text-purple-600 font-bold">12 ms</span></div>
+                       <input type="range" min="0" max="50" step="1" defaultValue="12" className="w-full" />
+                     </div>
+                     
+                     <div className="space-y-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                       <div className="flex justify-between items-end"><span className="text-sm font-bold text-gray-700">Control Frequency (控制频率)</span><span className="font-mono text-purple-600 font-bold">500 Hz</span></div>
+                       <input type="range" min="100" max="1000" step="100" defaultValue="500" className="w-full" />
+                     </div>
+
+                     <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200 mt-4 shadow-sm">
+                       <span className="text-sm font-bold text-gray-700">启用随机域扰动 (Domain Randomization)</span>
+                       <div className="w-12 h-6 bg-green-500 rounded-full relative cursor-pointer shadow-inner">
+                          <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 shadow-sm"></div>
+                       </div>
+                     </div>
+                  </div>
+                  <div className="flex justify-end pt-4 border-t border-gray-200">
+                    <button className="px-6 py-2.5 bg-purple-600 text-white font-bold text-sm rounded-xl shadow-md hover:bg-purple-700 active:scale-95 transition-all">保存高级参数</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

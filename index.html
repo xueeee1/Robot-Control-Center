@@ -395,10 +395,10 @@
 
       useEffect(() => {
         const handleKeyDown = (e) => {
-          if (e.key === 'F10') e.preventDefault(); // 拦截浏览器默认 F10
+          if (e.key === 'F8') e.preventDefault(); // 拦截浏览器默认 F8
           
           const key = e.key.toUpperCase();
-          if (key === 'F10') setActiveKey('F10');
+          if (key === 'F8') setActiveKey('F8');
           else if (key === 'ARROWUP') setActiveKey('↑');
           else if (key === 'ARROWDOWN') setActiveKey('↓');
           else if (key === 'ARROWLEFT') setActiveKey('←');
@@ -542,13 +542,13 @@
                     ))}
                   </div>
 
-                  {/* 替换原有的 Space 急停为 F10，并支持点击 */}
+                  {/* 替换原有的 Space 急停为 F8，并支持点击 */}
                   <div 
-                    className={`key-cap w-full max-w-[400px] h-14 text-lg tracking-widest gap-3 ${activeKey === 'F10' ? 'active !bg-red-600' : ''}`}
-                    onPointerDown={() => handlePointerDown('F10')} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
+                    className={`key-cap w-full max-w-[400px] h-14 text-lg tracking-widest gap-3 ${activeKey === 'F8' ? 'active !bg-red-600' : ''}`}
+                    onPointerDown={() => handlePointerDown('F8')} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
                   >
                      <i className="fa-solid fa-triangle-exclamation"></i>
-                     F10 (安全急停 E-STOP)
+                     F8 (安全急停 E-STOP)
                   </div>
                </div>
             </div>

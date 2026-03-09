@@ -395,10 +395,10 @@
 
       useEffect(() => {
         const handleKeyDown = (e) => {
-          if (e.key === 'F8') e.preventDefault(); // 拦截浏览器默认 F8
+          if (e.key === 'F10') e.preventDefault(); // 拦截浏览器默认 F10
           
           const key = e.key.toUpperCase();
-          if (key === 'F8') setActiveKey('F8');
+          if (key === 'F10') setActiveKey('F10');
           else if (key === 'ARROWUP') setActiveKey('↑');
           else if (key === 'ARROWDOWN') setActiveKey('↓');
           else if (key === 'ARROWLEFT') setActiveKey('←');
@@ -479,7 +479,7 @@
                <div className="flex flex-col md:flex-row items-center md:items-start gap-12 md:gap-24 z-10 mt-20">
                   <div className="flex flex-col items-center gap-4">
                     <div className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2 flex items-center gap-2">
-                      <i className="fa-solid fa-arrows-up-down-left-right text-blue-400"></i> 底盘平移
+                      <i className="fa-solid fa-arrows-up-down-left-right text-blue-400"></i> 行走方向
                     </div>
                     <div 
                       className={`key-cap w-14 h-14 md:w-16 md:h-16 text-xl md:text-2xl ${activeKey === 'W' ? 'active' : ''}`}
@@ -542,13 +542,13 @@
                     ))}
                   </div>
 
-                  {/* 替换原有的 Space 急停为 F8，并支持点击 */}
+                  {/* 替换原有的 Space 急停为 F10，并支持点击 */}
                   <div 
-                    className={`key-cap w-full max-w-[400px] h-14 text-lg tracking-widest gap-3 ${activeKey === 'F8' ? 'active !bg-red-600' : ''}`}
-                    onPointerDown={() => handlePointerDown('F8')} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
+                    className={`key-cap w-full max-w-[400px] h-14 text-lg tracking-widest gap-3 ${activeKey === 'F10' ? 'active !bg-red-600' : ''}`}
+                    onPointerDown={() => handlePointerDown('F10')} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}
                   >
                      <i className="fa-solid fa-triangle-exclamation"></i>
-                     F8 (安全急停 E-STOP)
+                     F10 (安全急停 E-STOP)
                   </div>
                </div>
             </div>
